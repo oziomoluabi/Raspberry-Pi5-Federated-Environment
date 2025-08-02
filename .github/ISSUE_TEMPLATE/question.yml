@@ -1,0 +1,95 @@
+name: ❓ Question
+description: Ask a question about the project
+title: "[QUESTION] "
+labels: ["question", "triage"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Have a question? We're here to help! Please check existing issues and documentation first.
+
+  - type: textarea
+    id: question
+    attributes:
+      label: What's your question?
+      description: Please be as specific as possible.
+      placeholder: I'm trying to understand how...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: Question category
+      description: What area does your question relate to?
+      options:
+        - Getting Started
+        - Federated Learning Setup
+        - Raspberry Pi Hardware
+        - Sensor Configuration
+        - MATLAB Integration
+        - TinyML Implementation
+        - Deployment
+        - Performance/Optimization
+        - Troubleshooting
+        - Contributing
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: |
+        What are you trying to accomplish? What have you already tried?
+      placeholder: |
+        I'm working on...
+        I've already tried...
+        I expected...
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment (if relevant)
+      description: |
+        If your question is environment-specific, please provide details:
+      value: |
+        - OS: [e.g. Raspberry Pi OS, Ubuntu 22.04]
+        - Python version: [e.g. 3.11.5]
+        - Hardware: [e.g. Raspberry Pi 5 8GB, Sense HAT]
+      render: markdown
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional-info
+    attributes:
+      label: Additional information
+      description: Any other details that might be helpful?
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Before asking
+      description: Please confirm you've done the following:
+      options:
+        - label: I've searched existing issues for similar questions
+          required: true
+        - label: I've checked the documentation and README
+          required: true
+        - label: I've provided enough context for others to understand my question
+          required: true
+
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Code of Conduct
+      description: By submitting this issue, you agree to follow our Code of Conduct
+      options:
+        - label: I agree to follow this project's Code of Conduct
+          required: true

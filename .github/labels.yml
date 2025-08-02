@@ -1,0 +1,203 @@
+# Repository Labels Configuration
+# This file defines the labels used in the repository for issues and PRs
+
+# Priority Labels
+- name: "priority: critical"
+  color: "d73a4a"
+  description: "Critical priority - needs immediate attention"
+
+- name: "priority: high"
+  color: "ff6b6b"
+  description: "High priority - should be addressed soon"
+
+- name: "priority: medium"
+  color: "ffa726"
+  description: "Medium priority - normal timeline"
+
+- name: "priority: low"
+  color: "4fc3f7"
+  description: "Low priority - can be addressed later"
+
+# Type Labels
+- name: "type: bug"
+  color: "d73a4a"
+  description: "Something isn't working"
+  aliases: ["bug"]
+
+- name: "type: feature"
+  color: "0e8a16"
+  description: "New feature or request"
+  aliases: ["enhancement", "feature"]
+
+- name: "type: documentation"
+  color: "1d76db"
+  description: "Improvements or additions to documentation"
+  aliases: ["documentation"]
+
+- name: "type: refactor"
+  color: "fbca04"
+  description: "Code refactoring without functional changes"
+
+- name: "type: performance"
+  color: "ff9500"
+  description: "Performance improvements"
+
+- name: "type: security"
+  color: "b60205"
+  description: "Security-related issues or improvements"
+
+- name: "type: test"
+  color: "0e8a16"
+  description: "Testing improvements or additions"
+
+# Component Labels
+- name: "component: server"
+  color: "5319e7"
+  description: "Federated learning server components"
+
+- name: "component: client"
+  color: "7057ff"
+  description: "Edge client components"
+
+- name: "component: sensors"
+  color: "8b5cf6"
+  description: "Sensor management and hardware integration"
+
+- name: "component: matlab"
+  color: "a855f7"
+  description: "MATLAB/Simulink integration"
+
+- name: "component: tinyml"
+  color: "c084fc"
+  description: "TinyML and autoencoder components"
+
+- name: "component: ci-cd"
+  color: "06b6d4"
+  description: "CI/CD pipeline and automation"
+
+- name: "component: docs"
+  color: "0891b2"
+  description: "Documentation and guides"
+
+- name: "component: tests"
+  color: "0e7490"
+  description: "Testing infrastructure and test cases"
+
+# Status Labels
+- name: "status: triage"
+  color: "ededed"
+  description: "Needs initial review and categorization"
+
+- name: "status: accepted"
+  color: "c2e0c6"
+  description: "Issue/PR has been accepted"
+
+- name: "status: in-progress"
+  color: "fbca04"
+  description: "Currently being worked on"
+
+- name: "status: blocked"
+  color: "d93f0b"
+  description: "Blocked by external dependencies"
+
+- name: "status: needs-review"
+  color: "0052cc"
+  description: "Needs code review"
+
+- name: "status: needs-testing"
+  color: "1d76db"
+  description: "Needs testing before merge"
+
+- name: "status: ready-to-merge"
+  color: "0e8a16"
+  description: "Ready to be merged"
+
+- name: "status: wont-fix"
+  color: "ffffff"
+  description: "This will not be worked on"
+
+# Difficulty Labels
+- name: "difficulty: beginner"
+  color: "7057ff"
+  description: "Good for newcomers"
+  aliases: ["good first issue"]
+
+- name: "difficulty: intermediate"
+  color: "a855f7"
+  description: "Requires some experience"
+
+- name: "difficulty: advanced"
+  color: "c084fc"
+  description: "Requires significant experience"
+
+- name: "difficulty: expert"
+  color: "e879f9"
+  description: "Requires deep domain knowledge"
+
+# Special Labels
+- name: "help wanted"
+  color: "008672"
+  description: "Extra attention is needed"
+
+- name: "question"
+  color: "d876e3"
+  description: "Further information is requested"
+
+- name: "duplicate"
+  color: "cfd3d7"
+  description: "This issue or pull request already exists"
+
+- name: "invalid"
+  color: "e4e669"
+  description: "This doesn't seem right"
+
+- name: "breaking-change"
+  color: "b60205"
+  description: "Introduces breaking changes"
+
+- name: "dependencies"
+  color: "0366d6"
+  description: "Pull requests that update a dependency file"
+
+# Hardware Labels
+- name: "hardware: raspberry-pi"
+  color: "c5def5"
+  description: "Raspberry Pi specific issues"
+
+- name: "hardware: sense-hat"
+  color: "bfd4f2"
+  description: "Sense HAT related issues"
+
+- name: "hardware: adxl345"
+  color: "b3d4fc"
+  description: "ADXL345 accelerometer issues"
+
+# Platform Labels
+- name: "platform: linux"
+  color: "f9d71c"
+  description: "Linux platform specific"
+
+- name: "platform: docker"
+  color: "2496ed"
+  description: "Docker related issues"
+
+- name: "platform: vscode"
+  color: "007acc"
+  description: "VS Code specific issues"
+
+# Release Labels
+- name: "release: major"
+  color: "d73a4a"
+  description: "Major version release"
+
+- name: "release: minor"
+  color: "ff6b6b"
+  description: "Minor version release"
+
+- name: "release: patch"
+  color: "ffa726"
+  description: "Patch version release"
+
+- name: "release: hotfix"
+  color: "b60205"
+  description: "Hotfix release"

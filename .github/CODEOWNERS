@@ -1,0 +1,55 @@
+# Global owners - these users will be requested for review on all PRs
+* @maintainer-team
+
+# Documentation
+*.md @docs-team @maintainer-team
+docs/ @docs-team @maintainer-team
+
+# Server components (Federated Learning)
+server/ @federated-learning-team @maintainer-team
+server/models/ @ml-team @federated-learning-team
+server/aggregation/ @federated-learning-team @maintainer-team
+
+# Client components (Edge Computing)
+client/ @edge-computing-team @maintainer-team
+client/sensing/ @hardware-team @edge-computing-team
+client/training/ @ml-team @edge-computing-team
+client/matlab/ @matlab-team @edge-computing-team
+
+# MATLAB integration
+matlab/ @matlab-team @maintainer-team
+*.m @matlab-team
+*.mlx @matlab-team
+*.slx @matlab-team
+
+# Testing
+tests/ @qa-team @maintainer-team
+tests/unit/ @qa-team @maintainer-team
+tests/integration/ @qa-team @hardware-team @maintainer-team
+
+# CI/CD and DevOps
+.github/ @devops-team @maintainer-team
+.devcontainer/ @devops-team @maintainer-team
+docker/ @devops-team @maintainer-team
+scripts/ @devops-team @maintainer-team
+
+# Configuration files
+*.yml @devops-team @maintainer-team
+*.yaml @devops-team @maintainer-team
+*.toml @devops-team @maintainer-team
+*.cfg @devops-team @maintainer-team
+*.ini @devops-team @maintainer-team
+config.* @devops-team @maintainer-team
+
+# Security-sensitive files
+SECURITY.md @security-team @maintainer-team
+.github/workflows/ @security-team @devops-team @maintainer-team
+
+# Package management
+requirements*.txt @devops-team @maintainer-team
+setup.py @devops-team @maintainer-team
+pyproject.toml @devops-team @maintainer-team
+
+# VS Code configuration
+.vscode/ @devops-team @maintainer-team
+*.code-workspace @devops-team @maintainer-team

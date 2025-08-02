@@ -1,0 +1,165 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "raspberry-pi5-federated"
+version = "0.1.0"
+description = "Federated Environmental Monitoring Network with TinyML on Raspberry Pi 5"
+readme = "README.md"
+license = {text = "MIT"}
+authors = [
+    {name = "Raspberry Pi 5 Federated Team", email = "team@example.com"}
+]
+maintainers = [
+    {name = "Raspberry Pi 5 Federated Team", email = "team@example.com"}
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: System :: Hardware",
+    "Topic :: System :: Networking",
+]
+requires-python = ">=3.11"
+dependencies = [
+    "numpy>=1.24.0",
+    "pandas>=2.0.0",
+    "matplotlib>=3.7.0",
+    "structlog>=23.1.0",
+    "pyyaml>=6.0",
+    "python-dotenv>=1.0.0",
+]
+
+[project.optional-dependencies]
+server = [
+    "flwr>=1.4.0",
+    "tensorflow-federated>=0.34.0",
+    "tensorflow>=2.12.0",
+    "keras>=2.12.0",
+    "grpcio>=1.54.0",
+    "grpcio-tools>=1.54.0",
+    "protobuf>=4.23.0",
+    "prometheus-client>=0.17.0",
+    "cryptography>=41.0.0",
+]
+client = [
+    "flwr>=1.4.0",
+    "tensorflow>=2.12.0",
+    "keras>=2.12.0",
+    "tflite-runtime>=2.12.0",
+    "tvm>=0.10.0",
+    "sense-hat>=2.6.0",
+    "adafruit-circuitpython-adxl34x>=1.12.0",
+    "RPi.GPIO>=0.7.1",
+    "gpiozero>=1.6.2",
+    "scipy>=1.11.0",
+    "matlabengine>=9.14.0",
+    "oct2py>=5.6.0",
+    "pybind11>=2.10.0",
+    "psutil>=5.9.0",
+    "schedule>=1.2.0",
+]
+dev = [
+    "black>=23.0.0",
+    "flake8>=6.0.0",
+    "isort>=5.12.0",
+    "bandit>=1.7.5",
+    "pytest>=7.4.0",
+    "pytest-cov>=4.1.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-mock>=3.11.0",
+    "mkdocs>=1.5.0",
+    "mkdocs-material>=9.1.0",
+    "pip-audit>=2.6.0",
+    "safety>=2.3.0",
+    "jupyter>=1.0.0",
+    "jupyterlab>=4.0.0",
+    "pre-commit>=3.3.0",
+]
+
+[project.scripts]
+federated-server = "server.main:main"
+federated-client = "client.main:main"
+
+[project.urls]
+Homepage = "https://github.com/YourOrg/Raspberry-Pi5-Federated"
+Documentation = "https://github.com/YourOrg/Raspberry-Pi5-Federated/docs"
+Repository = "https://github.com/YourOrg/Raspberry-Pi5-Federated.git"
+Issues = "https://github.com/YourOrg/Raspberry-Pi5-Federated/issues"
+
+[tool.setuptools.packages.find]
+include = ["server*", "client*", "matlab*"]
+
+[tool.black]
+line-length = 88
+target-version = ['py311']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # directories
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | build
+  | dist
+)/
+'''
+
+[tool.isort]
+profile = "black"
+multi_line_output = 3
+line_length = 88
+known_first_party = ["server", "client", "matlab"]
+
+[tool.flake8]
+max-line-length = 88
+extend-ignore = ["E203", "W503"]
+exclude = [".git", "__pycache__", "build", "dist", ".venv", "venv"]
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+addopts = "-ra -q --strict-markers --strict-config"
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+    "unit: marks tests as unit tests",
+    "hardware: marks tests that require hardware",
+]
+
+[tool.coverage.run]
+source = ["server", "client"]
+omit = [
+    "*/tests/*",
+    "*/test_*",
+    "*/__pycache__/*",
+    "*/venv/*",
+    "setup.py",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if self.debug:",
+    "if settings.DEBUG",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if 0:",
+    "if __name__ == .__main__.:",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod",
+]

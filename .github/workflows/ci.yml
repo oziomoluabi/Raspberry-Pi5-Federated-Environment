@@ -1,0 +1,274 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  lint-and-format:
+    runs-on: ubuntu-latest
+    name: Lint and Format Check
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install black flake8 isort bandit safety
+    
+    - name: Check code formatting with Black
+      run: black --check --diff .
+    
+    - name: Check import sorting with isort
+      run: isort --check-only --diff .
+    
+    - name: Lint with flake8
+      run: |
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=88 --statistics
+    
+    - name: Security check with bandit
+      run: bandit -r server/ client/ -f json -o bandit-report.json || true
+    
+    - name: Upload bandit report
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: bandit-report
+        path: bandit-report.json
+
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.11', '3.12']
+    
+    name: Test Python ${{ matrix.python-version }}
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+    
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential cmake
+    
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements-dev.txt
+        # Install basic dependencies without hardware-specific packages
+        pip install numpy pandas matplotlib structlog pyyaml python-dotenv
+        pip install pytest pytest-cov pytest-mock
+    
+    - name: Run unit tests
+      run: |
+        pytest tests/unit/ -v --cov=server --cov=client --cov-report=xml --cov-report=html
+    
+    - name: Upload coverage reports
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.xml
+        flags: unittests
+        name: codecov-umbrella
+    
+    - name: Upload coverage artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: coverage-report-${{ matrix.python-version }}
+        path: htmlcov/
+
+  integration-test:
+    runs-on: ubuntu-latest
+    name: Integration Tests
+    needs: [lint-and-format, test]
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install numpy pandas matplotlib structlog pyyaml python-dotenv
+        pip install pytest pytest-mock
+    
+    - name: Run integration tests
+      run: |
+        pytest tests/integration/ -v -m "not hardware"
+    
+    - name: Test import structure
+      run: |
+        python -c "from server.models.lstm_model import create_lstm_model; print('Server imports OK')"
+        python -c "from client.sensing.sensor_manager import SensorManager; print('Client imports OK')"
+
+  security-audit:
+    runs-on: ubuntu-latest
+    name: Security Audit
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pip-audit safety
+    
+    - name: Run pip-audit
+      run: |
+        pip-audit --format=json --output=pip-audit-report.json || true
+    
+    - name: Run safety check
+      run: |
+        safety check --json --output safety-report.json || true
+    
+    - name: Upload security reports
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: security-reports
+        path: |
+          pip-audit-report.json
+          safety-report.json
+
+  build-docs:
+    runs-on: ubuntu-latest
+    name: Build Documentation
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install mkdocs mkdocs-material
+    
+    - name: Build documentation
+      run: |
+        # Create basic mkdocs.yml if it doesn't exist
+        if [ ! -f mkdocs.yml ]; then
+          cat > mkdocs.yml << EOF
+        site_name: Raspberry Pi 5 Federated Environmental Monitoring
+        theme:
+          name: material
+        nav:
+          - Home: README.md
+          - Documentation: docs/
+        EOF
+        fi
+        mkdocs build
+    
+    - name: Upload documentation
+      uses: actions/upload-artifact@v3
+      with:
+        name: documentation
+        path: site/
+
+  performance-benchmark:
+    runs-on: ubuntu-latest
+    name: Performance Benchmarks
+    needs: [test]
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install numpy pandas matplotlib structlog
+        pip install pytest pytest-benchmark
+    
+    - name: Run performance benchmarks
+      run: |
+        # Create a simple benchmark test
+        cat > test_benchmark.py << EOF
+        import pytest
+        import numpy as np
+        from client.sensing.sensor_manager import SensorManager
+        
+        def test_sensor_reading_performance(benchmark):
+            sensor_manager = SensorManager(simulation_mode=True)
+            result = benchmark(sensor_manager.get_sensor_reading)
+            assert result is not None
+        
+        def test_batch_collection_performance(benchmark):
+            sensor_manager = SensorManager(simulation_mode=True)
+            result = benchmark(sensor_manager.collect_batch_data, 1, 10.0)
+            assert len(result) > 0
+        EOF
+        
+        pytest test_benchmark.py --benchmark-json=benchmark-results.json || true
+    
+    - name: Upload benchmark results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: benchmark-results
+        path: benchmark-results.json
+
+  docker-build:
+    runs-on: ubuntu-latest
+    name: Docker Build Test
+    needs: [lint-and-format, test]
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+    
+    - name: Build Dev Container
+      run: |
+        docker build -f .devcontainer/Dockerfile -t iot-edge-dev .
+    
+    - name: Test Dev Container
+      run: |
+        docker run --rm iot-edge-dev python --version
+        docker run --rm iot-edge-dev pip list | grep numpy
+
+  notify:
+    runs-on: ubuntu-latest
+    name: Notify Results
+    needs: [lint-and-format, test, integration-test, security-audit, build-docs, performance-benchmark, docker-build]
+    if: always()
+    
+    steps:
+    - name: Notify Success
+      if: ${{ needs.lint-and-format.result == 'success' && needs.test.result == 'success' }}
+      run: echo "✅ All checks passed successfully!"
+    
+    - name: Notify Failure
+      if: ${{ needs.lint-and-format.result == 'failure' || needs.test.result == 'failure' }}
+      run: echo "❌ Some checks failed. Please review the logs."

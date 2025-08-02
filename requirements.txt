@@ -1,0 +1,11 @@
+# Main Project Requirements
+# Include server and client requirements
+-r server/requirements.txt
+-r client/requirements.txt
+
+# Additional project-wide dependencies
+docker>=6.1.0
+ansible>=8.0.0
+
+# Optional MATLAB alternatives
+octave>=7.0.0  # System package, included for reference

@@ -1,0 +1,88 @@
+name: 📚 Documentation
+description: Report an issue with documentation or request documentation improvements
+title: "[DOCS] "
+labels: ["documentation", "triage"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping improve our documentation! Clear documentation is crucial for project success.
+
+  - type: dropdown
+    id: doc-type
+    attributes:
+      label: Documentation type
+      description: What type of documentation issue is this?
+      options:
+        - Missing documentation
+        - Incorrect/outdated information
+        - Unclear instructions
+        - Typo/grammar error
+        - Code example issue
+        - API documentation
+        - Tutorial/guide request
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: location
+    attributes:
+      label: Documentation location
+      description: Where is the documentation issue located?
+      placeholder: |
+        - File: README.md, docs/setup.md, etc.
+        - Section: Getting Started, API Reference, etc.
+        - URL: https://...
+    validations:
+      required: true
+
+  - type: textarea
+    id: current-content
+    attributes:
+      label: Current content (if applicable)
+      description: What does the current documentation say?
+      placeholder: Copy the current text here...
+    validations:
+      required: false
+
+  - type: textarea
+    id: suggested-content
+    attributes:
+      label: Suggested improvement
+      description: What should the documentation say instead?
+      placeholder: Suggested text or improvement...
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: |
+        Why is this documentation important? Who would benefit from this improvement?
+      placeholder: |
+        This would help new users because...
+        I was confused when trying to...
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: Contribution
+      description: Are you willing to help improve this documentation?
+      options:
+        - label: I'm willing to submit a pull request to fix this issue
+          required: false
+
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Code of Conduct
+      description: By submitting this issue, you agree to follow our Code of Conduct
+      options:
+        - label: I agree to follow this project's Code of Conduct
+          required: true

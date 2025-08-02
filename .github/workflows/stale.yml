@@ -1,0 +1,110 @@
+name: Mark stale issues and pull requests
+
+on:
+  schedule:
+  - cron: '30 1 * * *'  # Run daily at 1:30 AM UTC
+  workflow_dispatch:
+
+permissions:
+  issues: write
+  pull-requests: write
+
+jobs:
+  stale:
+    runs-on: ubuntu-latest
+    name: Mark Stale Issues and PRs
+    
+    steps:
+    - uses: actions/stale@v8
+      with:
+        repo-token: ${{ secrets.GITHUB_TOKEN }}
+        
+        # Issues configuration
+        stale-issue-message: |
+          This issue has been automatically marked as stale because it has not had recent activity. 
+          It will be closed if no further activity occurs within 7 days. 
+          
+          If this issue is still relevant, please:
+          - Add a comment to keep it open
+          - Add the "status: accepted" label if it's a valid issue
+          - Provide additional context or updates
+          
+          Thank you for your contributions! 🙏
+        
+        close-issue-message: |
+          This issue has been automatically closed due to inactivity. 
+          
+          If you believe this issue is still relevant, please:
+          - Reopen the issue
+          - Provide updated information
+          - Reference any related work
+          
+          Thank you for your understanding! 🙏
+        
+        # Pull requests configuration
+        stale-pr-message: |
+          This pull request has been automatically marked as stale because it has not had recent activity.
+          It will be closed if no further activity occurs within 7 days.
+          
+          If this PR is still relevant, please:
+          - Rebase against the latest main branch
+          - Address any review comments
+          - Add a comment to keep it open
+          
+          Thank you for your contribution! 🙏
+        
+        close-pr-message: |
+          This pull request has been automatically closed due to inactivity.
+          
+          If you'd like to continue this work, please:
+          - Reopen the PR
+          - Rebase against the latest main branch
+          - Address any outstanding review comments
+          
+          Thank you for your contribution! 🙏
+        
+        # Timing configuration
+        days-before-stale: 30
+        days-before-close: 7
+        days-before-pr-close: 7
+        
+        # Label configuration
+        stale-issue-label: 'status: stale'
+        stale-pr-label: 'status: stale'
+        close-issue-label: 'status: closed-stale'
+        close-pr-label: 'status: closed-stale'
+        
+        # Exemptions
+        exempt-issue-labels: |
+          status: accepted
+          priority: critical
+          priority: high
+          type: security
+          help wanted
+          good first issue
+          status: in-progress
+          status: blocked
+        
+        exempt-pr-labels: |
+          status: in-progress
+          status: needs-review
+          status: ready-to-merge
+          priority: critical
+          priority: high
+          type: security
+          breaking-change
+        
+        exempt-milestones: true
+        exempt-all-milestones: true
+        
+        # Additional configuration
+        operations-per-run: 100
+        remove-stale-when-updated: true
+        debug-only: false
+        ascending: false
+        
+        # Only process issues/PRs with specific labels (optional)
+        # only-labels: 'bug,enhancement'
+        
+        # Skip issues/PRs with specific labels
+        exempt-draft-pr: true

@@ -1,0 +1,98 @@
+{
+  "folders": [
+    { "path": "server" },
+    { "path": "client" },
+    { "path": "matlab" },
+    { "path": "docs" },
+    { "path": "scripts" }
+  ],
+  "settings": {
+    "python.formatting.provider": "black",
+    "python.linting.enabled": true,
+    "python.linting.flake8Enabled": true,
+    "C_Cpp.updateChannel": "Insiders",
+    "cmake.configureOnOpen": false,
+    "remote.containers.defaultConfig": "python:3.11-slim",
+    "matlab.mlintpath": "",
+    "octave.execPath": "octave-cli",
+    "editor.formatOnSave": true,
+    "files.exclude": {
+      "**/__pycache__": true,
+      "**/.pytest_cache": true,
+      "**/.venv": true,
+      "**/*.pyc": true
+    }
+  },
+  "extensions": {
+    "recommendations": [
+      "ms-python.python",
+      "ms-vscode-remote.remote-ssh",
+      "ms-vscode-remote.remote-containers",
+      "ms-vscode.cmake-tools",
+      "ms-azuretools.vscode-docker",
+      "MathWorks.language-matlab",
+      "Gimly.vscode-matlab",
+      "ms-vscode.cpptools",
+      "eamodio.gitlens"
+    ]
+  },
+  "launch": {
+    "version": "0.2.0",
+    "configurations": [
+      {
+        "name": "Debug Federated Server",
+        "type": "python",
+        "request": "launch",
+        "program": "${workspaceFolder:server}/main.py",
+        "console": "integratedTerminal",
+        "cwd": "${workspaceFolder:server}"
+      },
+      {
+        "name": "Debug Edge Client",
+        "type": "python",
+        "request": "launch",
+        "program": "${workspaceFolder:client}/main.py",
+        "console": "integratedTerminal",
+        "cwd": "${workspaceFolder:client}"
+      }
+    ]
+  },
+  "tasks": {
+    "version": "2.0.0",
+    "tasks": [
+      {
+        "label": "Run Federated Server",
+        "type": "shell",
+        "command": "python3",
+        "args": ["main.py"],
+        "options": { "cwd": "${workspaceFolder:server}" },
+        "group": { "kind": "build", "isDefault": true }
+      },
+      {
+        "label": "Run Edge Client",
+        "type": "shell",
+        "command": "python3",
+        "args": ["main.py"],
+        "options": { "cwd": "${workspaceFolder:client}" },
+        "group": "build"
+      },
+      {
+        "label": "Run MATLAB Enviro Analysis",
+        "type": "shell",
+        "command": "matlab",
+        "args": [
+          "-batch",
+          "cd client/matlab; run('env_forecast.m')"
+        ],
+        "options": { "cwd": "${workspaceFolder}" }
+      },
+      {
+        "label": "Call MATLAB from Python",
+        "type": "shell",
+        "command": "python3",
+        "args": ["client/train_with_matlab.py"],
+        "options": { "cwd": "${workspaceFolder}" }
+      }
+    ]
+  }
+}
