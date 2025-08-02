@@ -1,23 +1,19 @@
 #!/usr/bin/env python3
 """
-Federated Learning Client for Raspberry Pi 5
-Environmental Monitoring and TinyML Predictive Maintenance
+Federated Learning Client Entry Point
+Raspberry Pi 5 Federated Environmental Monitoring Network
 """
 
-import logging
-import sys
-import time
+import argparse
+import structlog
 from pathlib import Path
+import sys
 
 # Add project root to path
 project_root = Path(__file__).parent.parent
-sys.path.insert(0, str(project_root))
+sys.path.append(str(project_root))
 
-import flwr as fl
-import structlog
-from client.sensing.sensor_manager import SensorManager
-from client.training.federated_client import EnvironmentalClient
-from client.training.autoencoder import AutoencoderManager
+from client.training.federated_client import start_federated_client
 
 # Configure structured logging
 structlog.configure(
@@ -42,37 +38,57 @@ logger = structlog.get_logger(__name__)
 
 
 def main():
-    """Main entry point for the federated learning client."""
-    logger.info("Starting Federated Environmental Monitoring Client")
+    """Main entry point for federated learning client."""
+    
+    parser = argparse.ArgumentParser(
+        description="Federated Learning Client for Environmental Monitoring"
+    )
+    parser.add_argument(
+        "--server", 
+        default="localhost:8080",
+        help="Server address (default: localhost:8080)"
+    )
+    parser.add_argument(
+        "--client-id", 
+        default="client_1",
+        help="Client identifier (default: client_1)"
+    )
+    parser.add_argument(
+        "--config", 
+        help="Path to configuration file"
+    )
+    parser.add_argument(
+        "--verbose", 
+        action="store_true",
+        help="Enable verbose logging"
+    )
+    
+    args = parser.parse_args()
+    
+    # Set log level
+    if args.verbose:
+        import logging
+        logging.getLogger().setLevel(logging.DEBUG)
+    
+    logger.info(
+        "Starting Federated Learning Client",
+        server=args.server,
+        client_id=args.client_id,
+        config=args.config
+    )
     
     try:
-        # Initialize sensor manager
-        sensor_manager = SensorManager()
-        logger.info("Sensor manager initialized")
-        
-        # Initialize autoencoder for predictive maintenance
-        autoencoder_manager = AutoencoderManager()
-        logger.info("Autoencoder manager initialized")
-        
-        # Create federated learning client
-        client = EnvironmentalClient(
-            sensor_manager=sensor_manager,
-            autoencoder_manager=autoencoder_manager
+        start_federated_client(
+            server_address=args.server,
+            client_id=args.client_id,
+            config_path=args.config
         )
-        
-        # Start the Flower client
-        fl.client.start_numpy_client(
-            server_address="localhost:8080",
-            client=client
-        )
-        
+        logger.info("Client completed successfully")
     except KeyboardInterrupt:
-        logger.info("Client shutdown requested by user")
+        logger.info("Client interrupted by user")
     except Exception as e:
-        logger.error("Client error", error=str(e), exc_info=True)
+        logger.error("Client failed", error=str(e), exc_info=True)
         sys.exit(1)
-    finally:
-        logger.info("Federated client stopped")
 
 
 if __name__ == "__main__":

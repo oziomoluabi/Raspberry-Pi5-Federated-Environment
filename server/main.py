@@ -1,21 +1,19 @@
 #!/usr/bin/env python3
 """
-Federated Learning Server for Environmental Monitoring
+Federated Learning Server Entry Point
 Raspberry Pi 5 Federated Environmental Monitoring Network
 """
 
-import logging
-import sys
+import argparse
+import structlog
 from pathlib import Path
+import sys
 
 # Add project root to path
 project_root = Path(__file__).parent.parent
-sys.path.insert(0, str(project_root))
+sys.path.append(str(project_root))
 
-import flwr as fl
-import structlog
-from server.aggregation.federated_server import FederatedEnvironmentalServer
-from server.models.lstm_model import create_lstm_model
+from server.aggregation.federated_server import start_federated_server
 
 # Configure structured logging
 structlog.configure(
@@ -40,34 +38,58 @@ logger = structlog.get_logger(__name__)
 
 
 def main():
-    """Main entry point for the federated learning server."""
-    logger.info("Starting Federated Environmental Monitoring Server")
+    """Main entry point for federated learning server."""
+    
+    parser = argparse.ArgumentParser(
+        description="Federated Learning Server for Environmental Monitoring"
+    )
+    parser.add_argument(
+        "--address", 
+        default="0.0.0.0:8080",
+        help="Server address (default: 0.0.0.0:8080)"
+    )
+    parser.add_argument(
+        "--rounds", 
+        type=int, 
+        default=5,
+        help="Number of federated learning rounds (default: 5)"
+    )
+    parser.add_argument(
+        "--config", 
+        help="Path to configuration file"
+    )
+    parser.add_argument(
+        "--verbose", 
+        action="store_true",
+        help="Enable verbose logging"
+    )
+    
+    args = parser.parse_args()
+    
+    # Set log level
+    if args.verbose:
+        import logging
+        logging.getLogger().setLevel(logging.DEBUG)
+    
+    logger.info(
+        "Starting Federated Learning Server",
+        address=args.address,
+        rounds=args.rounds,
+        config=args.config
+    )
     
     try:
-        # Create the LSTM model architecture
-        model = create_lstm_model(
-            input_shape=(24, 2),  # 24 hours, 2 features (temp, humidity)
-            lstm_units=64,
-            dropout_rate=0.2
+        start_federated_server(
+            server_address=args.address,
+            config_path=args.config,
+            num_rounds=args.rounds
         )
-        
-        # Initialize the federated server
-        server = FederatedEnvironmentalServer(model)
-        
-        # Start the Flower server
-        fl.server.start_server(
-            server_address="0.0.0.0:8080",
-            config=fl.server.ServerConfig(num_rounds=10),
-            strategy=server.get_strategy()
-        )
-        
+        logger.info("Server completed successfully")
     except KeyboardInterrupt:
-        logger.info("Server shutdown requested by user")
+        logger.info("Server interrupted by user")
     except Exception as e:
-        logger.error("Server error", error=str(e), exc_info=True)
+        logger.error("Server failed", error=str(e), exc_info=True)
         sys.exit(1)
-    finally:
-        logger.info("Federated server stopped")
 
 
 if __name__ == "__main__":

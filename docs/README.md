@@ -21,7 +21,7 @@ All development is orchestrated in a **multi-root VS Code** workspace with Dev C
 4. [Folder Structure](#-folder-structure)  
 5. [Setup & Quickstart](#-setup--quickstart)  
 6. [Usage](#-usage)  
-7. [VS Code Integration](#-vs-code-integration)  
+7. [Documentation](#-documentation)  
 8. [Contributing](#-contributing)  
 9. [License](#-license)  
 
@@ -113,6 +113,30 @@ python main.py
 cd client
 python main.py
 ```
+
+---
+
+## 📖 Documentation
+
+### Project Planning & Architecture
+- [Project Technical Proposal](ProjectTechnicalProposal.md) - Complete technical specification and architecture
+- [Project Developer Implementation Roadmap](ProjectDeveloperImplementationRoadmap.md) - Sprint-based development plan
+- [Process Roadmap](ProcessRoadmap.md) - Phased delivery roadmap with milestones
+
+### Development Guidelines
+- [Code Requirements](CodeRequirements.md) - Coding standards, frameworks, and quality requirements
+- [Folder Structure Governance](FolderStructureGovernance.md) - Directory organization rules and processes
+- [Workspace Creation & Ritual Naming](WorkspaceCreationAndRitualNaming.md) - VS Code workspace setup guidelines
+
+### Operations & Maintenance
+- [Operations Log](OPERATIONS-LOG.md) - Complete record of GitHub environment setup and infrastructure
+- [Debug & Invocation Protocols](DebugAndInvocationProtocols.md) - Debugging procedures and troubleshooting
+- [Task & Ritual Automation](TaskAndRitualAutomation.md) - Automated workflows and processes
+
+### Project Management
+- [Extension Stewardship](ExtensionStewardship.md) - VS Code extension management
+- [Version Control & Lineage Tracking](VersionControlAndLineageTracking.md) - Git workflows and versioning
+- [Documentation & Archive Integration](DocumentationAndArchiveIntegration.md) - Documentation standards
 
 ---
 
