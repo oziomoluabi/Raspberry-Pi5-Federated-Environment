@@ -138,7 +138,7 @@ jobs:
     
     - name: Run pip-audit
       run: |
-        pip-audit --format=json --output=pip-audit-report.json || true
+        pip-audit -r requirements.lock -r server/requirements.lock -r client/requirements.lock --format=json --output=pip-audit-report.json || true
     
     - name: Run safety check
       run: |
