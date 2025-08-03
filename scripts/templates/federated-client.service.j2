@@ -1,0 +1,47 @@
+[Unit]
+Description=Raspberry Pi 5 Federated Learning Client - {{ node_id }}
+Documentation=https://github.com/YourOrg/Raspberry-Pi5-Federated
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+User={{ project_user }}
+Group={{ project_user }}
+WorkingDirectory={{ project_dir }}
+Environment=PYTHONPATH={{ project_dir }}
+Environment=NODE_ID={{ node_id }}
+Environment=CONFIG_FILE={{ project_dir }}/config_{{ node_id }}.yaml
+
+# Command to run
+ExecStart={{ project_dir }}/venv/bin/python {{ project_dir }}/client/main.py --config {{ project_dir }}/config_{{ node_id }}.yaml --node-id {{ node_id }}
+
+# Restart configuration
+Restart=always
+RestartSec=10
+StartLimitBurst=5
+
+# Resource limits
+MemoryMax=6G
+CPUQuota=300%  # 3 cores max on Pi 5
+TasksMax=100
+
+# Security settings
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths={{ project_dir }}
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=federated-client-{{ node_id }}
+
+# Health check
+ExecReload=/bin/kill -HUP $MAINPID
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target

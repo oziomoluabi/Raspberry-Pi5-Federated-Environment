@@ -1,0 +1,321 @@
+# Pre-commit configuration for Raspberry Pi 5 Federated Environmental Monitoring Network
+# This configuration ensures code quality, security, and consistency across the project
+
+repos:
+  # Pre-commit hooks for basic file checks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.4.0
+    hooks:
+      - id: trailing-whitespace
+        args: [--markdown-linebreak-ext=md]
+      - id: end-of-file-fixer
+      - id: check-yaml
+        args: [--allow-multiple-documents]
+      - id: check-json
+      - id: check-toml
+      - id: check-xml
+      - id: check-added-large-files
+        args: [--maxkb=1000]
+      - id: check-case-conflict
+      - id: check-merge-conflict
+      - id: check-symlinks
+      - id: check-executables-have-shebangs
+      - id: check-shebang-scripts-are-executable
+      - id: debug-statements
+      - id: detect-private-key
+      - id: fix-byte-order-marker
+      - id: mixed-line-ending
+        args: [--fix=lf]
+      - id: requirements-txt-fixer
+
+  # Python code formatting with Black
+  - repo: https://github.com/psf/black
+    rev: 23.7.0
+    hooks:
+      - id: black
+        language_version: python3.11
+        args: [--line-length=88]
+
+  # Import sorting with isort
+  - repo: https://github.com/pycqa/isort
+    rev: 5.12.0
+    hooks:
+      - id: isort
+        args: [--profile=black, --line-length=88]
+
+  # Linting with flake8
+  - repo: https://github.com/pycqa/flake8
+    rev: 6.0.0
+    hooks:
+      - id: flake8
+        args: [--max-line-length=88, --extend-ignore=E203,W503]
+        additional_dependencies:
+          - flake8-docstrings
+          - flake8-bugbear
+          - flake8-comprehensions
+          - flake8-simplify
+          - flake8-bandit
+          - flake8-pytest-style
+
+  # Type checking with mypy
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.5.1
+    hooks:
+      - id: mypy
+        args: [--ignore-missing-imports, --show-error-codes]
+        additional_dependencies:
+          - types-requests
+          - types-PyYAML
+          - types-python-dateutil
+        exclude: ^(tests/|docs/|scripts/test_)
+
+  # Security scanning with bandit
+  - repo: https://github.com/pycqa/bandit
+    rev: 1.7.5
+    hooks:
+      - id: bandit
+        args: [-r, server/, client/, scripts/, -f, json, -o, bandit-report.json]
+        exclude: ^tests/
+
+  # Safety check for known security vulnerabilities
+  - repo: https://github.com/Lucas-C/pre-commit-hooks-safety
+    rev: v1.3.2
+    hooks:
+      - id: python-safety-dependencies-check
+        args: [--json, --output, safety-report.json]
+
+  # Dockerfile linting
+  - repo: https://github.com/hadolint/hadolint
+    rev: v2.12.0
+    hooks:
+      - id: hadolint-docker
+        args: [--ignore, DL3008, --ignore, DL3009, --ignore, DL3015]
+
+  # YAML linting
+  - repo: https://github.com/adrienverge/yamllint
+    rev: v1.32.0
+    hooks:
+      - id: yamllint
+        args: [-d, relaxed]
+
+  # Markdown linting
+  - repo: https://github.com/igorshubovych/markdownlint-cli
+    rev: v0.35.0
+    hooks:
+      - id: markdownlint
+        args: [--fix, --ignore, node_modules/]
+
+  # Shell script linting
+  - repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: v0.9.0.5
+    hooks:
+      - id: shellcheck
+        args: [-e, SC1091, -e, SC2034]
+
+  # Jupyter notebook cleaning
+  - repo: https://github.com/nbQA-dev/nbQA
+    rev: 1.7.0
+    hooks:
+      - id: nbqa-black
+        args: [--line-length=88]
+      - id: nbqa-isort
+        args: [--profile=black]
+      - id: nbqa-flake8
+        args: [--max-line-length=88, --extend-ignore=E203,W503]
+
+  # Remove unused imports
+  - repo: https://github.com/pycqa/autoflake
+    rev: v2.2.0
+    hooks:
+      - id: autoflake
+        args:
+          - --in-place
+          - --remove-all-unused-imports
+          - --remove-unused-variables
+          - --remove-duplicate-keys
+          - --ignore-init-module-imports
+
+  # Upgrade Python syntax
+  - repo: https://github.com/asottile/pyupgrade
+    rev: v3.10.1
+    hooks:
+      - id: pyupgrade
+        args: [--py311-plus]
+
+  # Check for common Python mistakes
+  - repo: https://github.com/pre-commit/pygrep-hooks
+    rev: v1.10.0
+    hooks:
+      - id: python-check-blanket-noqa
+      - id: python-check-blanket-type-ignore
+      - id: python-no-log-warn
+      - id: python-no-eval
+      - id: python-use-type-annotations
+      - id: rst-backticks
+      - id: rst-directive-colons
+      - id: rst-inline-touching-normal
+
+  # Documentation checks
+  - repo: https://github.com/pycqa/pydocstyle
+    rev: 6.3.0
+    hooks:
+      - id: pydocstyle
+        args: [--convention=google, --add-ignore=D100,D101,D102,D103,D104,D105,D107]
+        exclude: ^(tests/|docs/|migrations/)
+
+  # Check for secrets
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.4.0
+    hooks:
+      - id: detect-secrets
+        args: [--baseline, .secrets.baseline]
+        exclude: ^(tests/|docs/|\.secrets\.baseline$)
+
+  # License header check
+  - repo: https://github.com/Lucas-C/pre-commit-hooks
+    rev: v1.5.4
+    hooks:
+      - id: insert-license
+        files: \.py$
+        args:
+          - --license-filepath
+          - LICENSE_HEADER.txt
+          - --comment-style
+          - "#"
+        exclude: ^(tests/|docs/|migrations/|__pycache__/)
+
+  # Conventional commits
+  - repo: https://github.com/compilerla/conventional-pre-commit
+    rev: v2.4.0
+    hooks:
+      - id: conventional-pre-commit
+        stages: [commit-msg]
+        args: [optional-scope]
+
+  # Local hooks for project-specific checks
+  - repo: local
+    hooks:
+      # Run unit tests
+      - id: pytest-unit
+        name: Run unit tests
+        entry: pytest
+        language: system
+        args: [tests/unit/, -v, --tb=short, --maxfail=5]
+        pass_filenames: false
+        stages: [pre-push]
+
+      # Security audit
+      - id: security-audit
+        name: Run security audit
+        entry: python
+        language: system
+        args: [scripts/security_audit.py, --output-format, json]
+        pass_filenames: false
+        stages: [pre-push]
+
+      # Check imports
+      - id: check-imports
+        name: Check import structure
+        entry: python
+        language: system
+        args: [-c, "from server.main import FederatedServer; from client.main import FederatedClient; print('✅ Import structure OK')"]
+        pass_filenames: false
+
+      # Validate configuration files
+      - id: validate-configs
+        name: Validate configuration files
+        entry: python
+        language: system
+        args: [-c, "import yaml; import json; import toml; print('✅ Configuration validation OK')"]
+        files: \.(yml|yaml|json|toml)$
+        pass_filenames: false
+
+      # Check for TODO/FIXME comments
+      - id: check-todos
+        name: Check for TODO/FIXME comments
+        entry: python
+        language: system
+        args: [-c, "import sys; import re; files = sys.argv[1:]; pattern = re.compile(r'(TODO|FIXME|XXX|HACK)', re.IGNORECASE); found = []; [found.extend([(f, i+1, line.strip()) for i, line in enumerate(open(f, 'r', encoding='utf-8', errors='ignore').readlines()) if pattern.search(line)]) for f in files if f.endswith('.py')]; [print(f'{f}:{line}: {content}') for f, line, content in found]; sys.exit(len(found))"]
+        files: \.py$
+        verbose: true
+
+      # Check for print statements (should use logging)
+      - id: check-print-statements
+        name: Check for print statements
+        entry: python
+        language: system
+        args: [-c, "import sys; import re; files = sys.argv[1:]; pattern = re.compile(r'^[^#]*print\s*\(', re.MULTILINE); found = []; [found.extend([(f, i+1, line.strip()) for i, line in enumerate(open(f, 'r', encoding='utf-8', errors='ignore').readlines()) if pattern.search(line) and 'test_' not in f]) for f in files if f.endswith('.py')]; [print(f'{f}:{line}: {content}') for f, line, content in found]; sys.exit(len(found))"]
+        files: \.py$
+        exclude: ^(tests/|scripts/test_|conftest\.py)
+
+      # Check for hardcoded secrets
+      - id: check-hardcoded-secrets
+        name: Check for hardcoded secrets
+        entry: python
+        language: system
+        args: [-c, "import sys; import re; files = sys.argv[1:]; patterns = [re.compile(r'password\\s*=\\s*[\"\\'][^\"\\'\n]+[\"\\']', re.IGNORECASE), re.compile(r'secret\\s*=\\s*[\"\\'][^\"\\'\n]+[\"\\']', re.IGNORECASE), re.compile(r'api_key\\s*=\\s*[\"\\'][^\"\\'\n]+[\"\\']', re.IGNORECASE)]; found = []; [found.extend([(f, i+1, 'Potential hardcoded secret') for i, line in enumerate(open(f, 'r', encoding='utf-8', errors='ignore').readlines()) for pattern in patterns if pattern.search(line)]) for f in files if f.endswith('.py')]; [print(f'{f}:{line}: {content}') for f, line, content in found]; sys.exit(len(found))"]
+        files: \.py$
+        exclude: ^(tests/|conftest\.py)
+
+      # Check file sizes
+      - id: check-file-sizes
+        name: Check file sizes
+        entry: python
+        language: system
+        args: [-c, "import sys; import os; files = sys.argv[1:]; large_files = [(f, os.path.getsize(f)) for f in files if os.path.getsize(f) > 1000000]; [print(f'{f}: {size/1024/1024:.1f}MB') for f, size in large_files]; sys.exit(len(large_files))"]
+        verbose: true
+
+# Configuration for specific hooks
+ci:
+  autofix_commit_msg: |
+    [pre-commit.ci] auto fixes from pre-commit.com hooks
+
+    for more information, see https://pre-commit.ci
+  autofix_prs: true
+  autoupdate_branch: ''
+  autoupdate_commit_msg: '[pre-commit.ci] pre-commit autoupdate'
+  autoupdate_schedule: weekly
+  skip: [pytest-unit, security-audit]  # Skip slow hooks in CI
+  submodules: false
+
+# Default language version
+default_language_version:
+  python: python3.11
+  node: "18.17.0"
+
+# Default stages
+default_stages: [commit, push]
+
+# Exclude patterns
+exclude: |
+  (?x)^(
+      \.git/|
+      \.venv/|
+      venv/|
+      env/|
+      \.env/|
+      __pycache__/|
+      \.pytest_cache/|
+      \.mypy_cache/|
+      \.coverage|
+      htmlcov/|
+      \.tox/|
+      build/|
+      dist/|
+      \.egg-info/|
+      node_modules/|
+      \.DS_Store|
+      Thumbs\.db|
+      \.idea/|
+      \.vscode/settings\.json|
+      migrations/|
+      static/|
+      media/|
+      locale/
+  )
+
+# Fail fast - stop on first failure
+fail_fast: false
+
+# Minimum pre-commit version
+minimum_pre_commit_version: "3.0.0"

@@ -1,0 +1,282 @@
+site_name: Raspberry Pi 5 Federated Environmental Monitoring Network
+site_description: A comprehensive edge-AI platform combining federated learning, TinyML, and MATLAB/Simulink integration for environmental monitoring
+site_author: Raspberry Pi 5 Federated Team
+site_url: https://your-organization.github.io/Raspberry-Pi5-Federated
+
+# Repository information
+repo_name: YourOrg/Raspberry-Pi5-Federated
+repo_url: https://github.com/YourOrg/Raspberry-Pi5-Federated
+edit_uri: edit/main/docs/
+
+# Copyright
+copyright: Copyright &copy; 2024 Raspberry Pi 5 Federated Team
+
+# Configuration
+theme:
+  name: material
+  language: en
+  palette:
+    # Palette toggle for light mode
+    - scheme: default
+      primary: deep purple
+      accent: purple
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    # Palette toggle for dark mode
+    - scheme: slate
+      primary: deep purple
+      accent: purple
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  
+  font:
+    text: Roboto
+    code: Roboto Mono
+  
+  features:
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.expand
+    - navigation.path
+    - navigation.indexes
+    - navigation.top
+    - search.highlight
+    - search.share
+    - search.suggest
+    - toc.follow
+    - content.code.copy
+    - content.code.annotate
+    - content.tabs.link
+    - content.tooltips
+    - content.action.edit
+    - content.action.view
+  
+  icon:
+    repo: fontawesome/brands/github
+    edit: material/pencil
+    view: material/eye
+    logo: material/memory
+
+# Plugins
+plugins:
+  - search:
+      lang: en
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            docstring_style: google
+            show_source: true
+            show_root_heading: true
+            show_root_toc_entry: false
+            merge_init_into_class: true
+            separate_signature: true
+            show_signature_annotations: true
+            signature_crossrefs: true
+  - mermaid2:
+      arguments:
+        theme: |
+          ^(auto|dark|default|forest|neutral)$
+  - jupyter:
+      execute: false
+      allow_errors: false
+      include_source: true
+  - git-revision-date-localized:
+      type: date
+      fallback_to_build_date: true
+  - minify:
+      minify_html: true
+      minify_css: true
+      minify_js: true
+      htmlmin_opts:
+        remove_comments: true
+  - social:
+      cards: true
+      cards_color:
+        fill: "#673AB7"
+        text: "#FFFFFF"
+
+# Extensions
+markdown_extensions:
+  - abbr
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - toc:
+      permalink: true
+      title: On this page
+  - tables
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.betterem:
+      smart_enable: all
+  - pymdownx.caret
+  - pymdownx.details
+  - pymdownx.emoji:
+      emoji_index: !!python/name:materialx.emoji.twemoji
+      emoji_generator: !!python/name:materialx.emoji.to_svg
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.magiclink:
+      repo_url_shorthand: true
+      user: YourOrg
+      repo: Raspberry-Pi5-Federated
+  - pymdownx.mark
+  - pymdownx.smartsymbols
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tilde
+
+# Extra JavaScript and CSS
+extra_javascript:
+  - javascripts/mathjax.js
+  - https://polyfill.io/v3/polyfill.min.js?features=es6
+  - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
+
+extra_css:
+  - stylesheets/extra.css
+
+# Extra configuration
+extra:
+  version:
+    provider: mike
+    default: latest
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/YourOrg/Raspberry-Pi5-Federated
+    - icon: fontawesome/brands/python
+      link: https://pypi.org/project/raspberry-pi5-federated/
+    - icon: fontawesome/brands/docker
+      link: https://hub.docker.com/r/yourorg/raspberry-pi5-federated
+  analytics:
+    provider: google
+    property: G-XXXXXXXXXX  # Replace with your Google Analytics ID
+  consent:
+    title: Cookie consent
+    description: >-
+      We use cookies to recognize your repeated visits and preferences, as well
+      as to measure the effectiveness of our documentation and whether users
+      find what they're searching for. With your consent, you're helping us to
+      make our documentation better.
+
+# Navigation structure
+nav:
+  - Home: index.md
+  
+  - Getting Started:
+    - getting-started/index.md
+    - Installation: getting-started/installation.md
+    - Quick Start: getting-started/quickstart.md
+    - Hardware Setup: getting-started/hardware-setup.md
+    - Development Environment: getting-started/development-environment.md
+  
+  - Architecture:
+    - architecture/index.md
+    - System Overview: architecture/system-overview.md
+    - Federated Learning: architecture/federated-learning.md
+    - TinyML Integration: architecture/tinyml-integration.md
+    - MATLAB/Simulink: architecture/matlab-simulink.md
+    - Security Framework: architecture/security-framework.md
+  
+  - User Guide:
+    - user-guide/index.md
+    - Data Collection: user-guide/data-collection.md
+    - Model Training: user-guide/model-training.md
+    - Deployment: user-guide/deployment.md
+    - Monitoring: user-guide/monitoring.md
+    - Troubleshooting: user-guide/troubleshooting.md
+  
+  - Tutorials:
+    - tutorials/index.md
+    - Basic Federated Learning: tutorials/basic-federated-learning.md
+    - TinyML Anomaly Detection: tutorials/tinyml-anomaly-detection.md
+    - MATLAB Integration: tutorials/matlab-integration.md
+    - Security Configuration: tutorials/security-configuration.md
+    - Performance Optimization: tutorials/performance-optimization.md
+    - Custom Sensors: tutorials/custom-sensors.md
+  
+  - API Reference:
+    - api/index.md
+    - Server Components:
+      - Federated Server: api/server/federated_server.md
+      - LSTM Models: api/server/lstm_models.md
+      - Security: api/server/security.md
+    - Client Components:
+      - Federated Client: api/client/federated_client.md
+      - Sensor Management: api/client/sensor_management.md
+      - Training: api/client/training.md
+      - TinyML: api/client/tinyml.md
+      - MATLAB Integration: api/client/matlab_integration.md
+    - Utilities:
+      - Configuration: api/utilities/configuration.md
+      - Logging: api/utilities/logging.md
+      - Testing: api/utilities/testing.md
+  
+  - Development:
+    - development/index.md
+    - Contributing: development/contributing.md
+    - Code Style: development/code-style.md
+    - Testing: development/testing.md
+    - CI/CD Pipeline: development/cicd-pipeline.md
+    - Release Process: development/release-process.md
+    - Docker Development: development/docker-development.md
+  
+  - Deployment:
+    - deployment/index.md
+    - Production Setup: deployment/production-setup.md
+    - Docker Deployment: deployment/docker-deployment.md
+    - Kubernetes: deployment/kubernetes.md
+    - Cloud Deployment: deployment/cloud-deployment.md
+    - Edge Deployment: deployment/edge-deployment.md
+    - Monitoring & Logging: deployment/monitoring-logging.md
+  
+  - Security:
+    - security/index.md
+    - Security Overview: security/security-overview.md
+    - TLS Configuration: security/tls-configuration.md
+    - Authentication: security/authentication.md
+    - Differential Privacy: security/differential-privacy.md
+    - Security Audit: security/security-audit.md
+    - Best Practices: security/best-practices.md
+  
+  - Performance:
+    - performance/index.md
+    - Benchmarking: performance/benchmarking.md
+    - Optimization: performance/optimization.md
+    - Profiling: performance/profiling.md
+    - Resource Management: performance/resource-management.md
+  
+  - Examples:
+    - examples/index.md
+    - Basic Examples: examples/basic-examples.md
+    - Advanced Examples: examples/advanced-examples.md
+    - Jupyter Notebooks: examples/jupyter-notebooks.md
+    - Use Cases: examples/use-cases.md
+  
+  - FAQ: faq.md
+  - Changelog: changelog.md
+  - License: license.md
+  - Support: support.md
+
+# Watch additional files
+watch:
+  - server/
+  - client/
+  - scripts/
+  - tests/

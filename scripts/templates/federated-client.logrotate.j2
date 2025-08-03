@@ -1,0 +1,32 @@
+{{ project_dir }}/logs/{{ node_id }}.log {
+    daily
+    missingok
+    rotate 30
+    compress
+    delaycompress
+    notifempty
+    create 644 {{ project_user }} {{ project_user }}
+    postrotate
+        systemctl reload federated-client-{{ node_id }} > /dev/null 2>&1 || true
+    endscript
+}
+
+{{ project_dir }}/logs/monitor.log {
+    daily
+    missingok
+    rotate 7
+    compress
+    delaycompress
+    notifempty
+    create 644 {{ project_user }} {{ project_user }}
+}
+
+{{ project_dir }}/logs/metrics_{{ node_id }}.json {
+    hourly
+    missingok
+    rotate 168
+    compress
+    delaycompress
+    notifempty
+    create 644 {{ project_user }} {{ project_user }}
+}

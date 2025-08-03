@@ -1,0 +1,76 @@
+# Ansible Inventory for Raspberry Pi 5 Federated Learning Network
+# Sprint 7: Pilot Deployment & Validation
+
+all:
+  vars:
+    ansible_user: pi
+    ansible_ssh_private_key_file: ~/.ssh/id_rsa
+    ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
+    ansible_python_interpreter: /usr/bin/python3
+
+# Federated Learning Server
+server:
+  hosts:
+    federated-server:
+      ansible_host: 192.168.1.100
+      server_role: aggregator
+      
+# Raspberry Pi 5 Client Nodes
+pi_nodes:
+  hosts:
+    pi-node-01:
+      ansible_host: 192.168.1.101
+      node_role: environmental_monitor
+      location: "Living Room"
+      sensors:
+        - sense_hat
+        - adxl345
+      
+    pi-node-02:
+      ansible_host: 192.168.1.102
+      node_role: vibration_monitor
+      location: "Kitchen"
+      sensors:
+        - sense_hat
+        - adxl345
+      
+    pi-node-03:
+      ansible_host: 192.168.1.103
+      node_role: environmental_monitor
+      location: "Bedroom"
+      sensors:
+        - sense_hat
+        - adxl345
+
+# Group variables
+pi_nodes:
+  vars:
+    # Hardware specifications
+    hardware:
+      model: "Raspberry Pi 5"
+      memory_gb: 8
+      cpu_cores: 4
+      architecture: "aarch64"
+    
+    # Network configuration
+    network:
+      wifi_enabled: true
+      ethernet_enabled: true
+      
+    # Performance settings
+    performance:
+      cpu_governor: "ondemand"
+      gpu_memory_split: 64
+      
+    # Security settings
+    security:
+      ssh_key_only: true
+      firewall_enabled: true
+      auto_updates: true
+
+# Development/Testing group (for local testing)
+development:
+  hosts:
+    localhost:
+      ansible_connection: local
+      ansible_python_interpreter: "{{ ansible_playbook_python }}"

@@ -1,0 +1,283 @@
+---
+# Ansible Playbook for Raspberry Pi 5 Federated Learning Node Provisioning
+# Sprint 7: Pilot Deployment & Validation
+
+- name: Provision Raspberry Pi 5 Federated Learning Nodes
+  hosts: pi_nodes
+  become: yes
+  gather_facts: yes
+  
+  vars:
+    project_name: "raspberry-pi5-federated"
+    project_user: "pi"
+    project_dir: "/home/{{ project_user }}/{{ project_name }}"
+    python_version: "3.11"
+    node_id: "{{ inventory_hostname }}"
+    
+    # Network configuration
+    server_host: "{{ groups['server'][0] }}"
+    server_port: 8080
+    
+    # Hardware configuration
+    enable_i2c: true
+    enable_spi: true
+    enable_camera: false
+    
+    # Security configuration
+    ssh_key_path: "~/.ssh/id_rsa.pub"
+    firewall_enabled: true
+
+  tasks:
+    - name: Update system packages
+      apt:
+        update_cache: yes
+        upgrade: dist
+        cache_valid_time: 3600
+      tags: [system, update]
+
+    - name: Install system dependencies
+      apt:
+        name:
+          - python3
+          - python3-pip
+          - python3-venv
+          - git
+          - cmake
+          - build-essential
+          - libssl-dev
+          - libffi-dev
+          - libblas-dev
+          - liblapack-dev
+          - libatlas-base-dev
+          - gfortran
+          - pkg-config
+          - libhdf5-dev
+          - libjpeg-dev
+          - zlib1g-dev
+          - libtiff5-dev
+          - libfreetype6-dev
+          - liblcms2-dev
+          - libwebp-dev
+          - tcl8.6-dev
+          - tk8.6-dev
+          - python3-tk
+          - libharfbuzz-dev
+          - libfribidi-dev
+          - libxcb1-dev
+          - i2c-tools
+          - python3-smbus
+          - sense-hat
+          - docker.io
+          - docker-compose
+          - ufw
+          - htop
+          - tmux
+          - vim
+          - curl
+          - wget
+          - rsync
+        state: present
+      tags: [system, dependencies]
+
+    - name: Enable I2C interface
+      lineinfile:
+        path: /boot/config.txt
+        line: "dtparam=i2c_arm=on"
+        create: yes
+      when: enable_i2c
+      notify: reboot_pi
+      tags: [hardware, i2c]
+
+    - name: Enable SPI interface
+      lineinfile:
+        path: /boot/config.txt
+        line: "dtparam=spi=on"
+        create: yes
+      when: enable_spi
+      notify: reboot_pi
+      tags: [hardware, spi]
+
+    - name: Add pi user to i2c group
+      user:
+        name: "{{ project_user }}"
+        groups: i2c,spi,gpio,docker
+        append: yes
+      tags: [system, permissions]
+
+    - name: Create project directory
+      file:
+        path: "{{ project_dir }}"
+        state: directory
+        owner: "{{ project_user }}"
+        group: "{{ project_user }}"
+        mode: '0755'
+      tags: [project, setup]
+
+    - name: Clone project repository
+      git:
+        repo: "https://github.com/YourOrg/Raspberry-Pi5-Federated.git"
+        dest: "{{ project_dir }}"
+        version: main
+        force: yes
+      become_user: "{{ project_user }}"
+      tags: [project, git]
+
+    - name: Create Python virtual environment
+      command: python3 -m venv "{{ project_dir }}/venv"
+      become_user: "{{ project_user }}"
+      args:
+        creates: "{{ project_dir }}/venv/bin/activate"
+      tags: [python, venv]
+
+    - name: Upgrade pip in virtual environment
+      pip:
+        name: pip
+        state: latest
+        virtualenv: "{{ project_dir }}/venv"
+      become_user: "{{ project_user }}"
+      tags: [python, pip]
+
+    - name: Install Python dependencies
+      pip:
+        requirements: "{{ project_dir }}/requirements.txt"
+        virtualenv: "{{ project_dir }}/venv"
+      become_user: "{{ project_user }}"
+      tags: [python, dependencies]
+
+    - name: Install additional Pi-specific packages
+      pip:
+        name:
+          - RPi.GPIO
+          - adafruit-circuitpython-adxl34x
+          - sense-hat
+        virtualenv: "{{ project_dir }}/venv"
+      become_user: "{{ project_user }}"
+      tags: [python, hardware]
+
+    - name: Create configuration file from template
+      template:
+        src: pi_config.yaml.j2
+        dest: "{{ project_dir }}/config_{{ node_id }}.yaml"
+        owner: "{{ project_user }}"
+        group: "{{ project_user }}"
+        mode: '0644'
+      tags: [config]
+
+    - name: Create systemd service for federated client
+      template:
+        src: federated-client.service.j2
+        dest: /etc/systemd/system/federated-client-{{ node_id }}.service
+        mode: '0644'
+      notify: 
+        - reload_systemd
+        - restart_federated_client
+      tags: [systemd, service]
+
+    - name: Create log directory
+      file:
+        path: "{{ project_dir }}/logs"
+        state: directory
+        owner: "{{ project_user }}"
+        group: "{{ project_user }}"
+        mode: '0755'
+      tags: [logging]
+
+    - name: Configure log rotation
+      template:
+        src: federated-client.logrotate.j2
+        dest: /etc/logrotate.d/federated-client-{{ node_id }}
+        mode: '0644'
+      tags: [logging, logrotate]
+
+    - name: Configure firewall rules
+      ufw:
+        rule: allow
+        port: "{{ item }}"
+        proto: tcp
+      loop:
+        - "22"      # SSH
+        - "8080"    # Federated server communication
+        - "9090"    # Metrics
+      when: firewall_enabled
+      tags: [security, firewall]
+
+    - name: Enable firewall
+      ufw:
+        state: enabled
+        policy: deny
+        direction: incoming
+      when: firewall_enabled
+      tags: [security, firewall]
+
+    - name: Create monitoring script
+      template:
+        src: monitor_node.sh.j2
+        dest: "{{ project_dir }}/scripts/monitor_node.sh"
+        owner: "{{ project_user }}"
+        group: "{{ project_user }}"
+        mode: '0755'
+      tags: [monitoring]
+
+    - name: Setup cron job for monitoring
+      cron:
+        name: "Monitor federated learning node"
+        minute: "*/5"
+        job: "{{ project_dir }}/scripts/monitor_node.sh >> {{ project_dir }}/logs/monitor.log 2>&1"
+        user: "{{ project_user }}"
+      tags: [monitoring, cron]
+
+    - name: Create health check endpoint
+      template:
+        src: health_check.py.j2
+        dest: "{{ project_dir }}/scripts/health_check.py"
+        owner: "{{ project_user }}"
+        group: "{{ project_user }}"
+        mode: '0755'
+      tags: [monitoring, health]
+
+    - name: Test sensor connectivity
+      command: "{{ project_dir }}/venv/bin/python {{ project_dir }}/scripts/test_sensors.py"
+      become_user: "{{ project_user }}"
+      register: sensor_test
+      ignore_errors: yes
+      tags: [hardware, test]
+
+    - name: Display sensor test results
+      debug:
+        var: sensor_test.stdout_lines
+      when: sensor_test is defined
+      tags: [hardware, test]
+
+    - name: Enable and start federated client service
+      systemd:
+        name: federated-client-{{ node_id }}
+        enabled: yes
+        state: started
+        daemon_reload: yes
+      tags: [service, start]
+
+  handlers:
+    - name: reboot_pi
+      reboot:
+        reboot_timeout: 300
+      listen: "reboot_pi"
+
+    - name: reload_systemd
+      systemd:
+        daemon_reload: yes
+      listen: "reload_systemd"
+
+    - name: restart_federated_client
+      systemd:
+        name: federated-client-{{ node_id }}
+        state: restarted
+      listen: "restart_federated_client"
+
+# Inventory groups expected:
+# [server]
+# federated-server ansible_host=192.168.1.100
+#
+# [pi_nodes]
+# pi-node-01 ansible_host=192.168.1.101
+# pi-node-02 ansible_host=192.168.1.102  
+# pi-node-03 ansible_host=192.168.1.103

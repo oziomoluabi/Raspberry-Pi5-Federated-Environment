@@ -1,0 +1,188 @@
+#!/bin/bash
+# Raspberry Pi 5 Node Monitoring Script - {{ node_id }}
+# Sprint 7: Pilot Deployment & Validation
+
+NODE_ID="{{ node_id }}"
+PROJECT_DIR="{{ project_dir }}"
+LOG_FILE="{{ project_dir }}/logs/monitor.log"
+METRICS_FILE="{{ project_dir }}/logs/metrics_${NODE_ID}.json"
+
+# Function to log with timestamp
+log_message() {
+    echo "$(date '+%Y-%m-%d %H:%M:%S') [${NODE_ID}] $1" | tee -a "$LOG_FILE"
+}
+
+# Function to get system metrics
+get_system_metrics() {
+    local timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+    
+    # CPU metrics
+    local cpu_usage=$(top -bn1 | grep "Cpu(s)" | awk '{print $2}' | cut -d'%' -f1)
+    local load_avg=$(uptime | awk -F'load average:' '{print $2}' | awk '{print $1}' | tr -d ',')
+    
+    # Memory metrics
+    local memory_info=$(free -m | grep '^Mem:')
+    local memory_total=$(echo $memory_info | awk '{print $2}')
+    local memory_used=$(echo $memory_info | awk '{print $3}')
+    local memory_percent=$(echo "scale=2; $memory_used * 100 / $memory_total" | bc)
+    
+    # Disk metrics
+    local disk_usage=$(df -h {{ project_dir }} | tail -1 | awk '{print $5}' | tr -d '%')
+    
+    # Temperature (Pi-specific)
+    local cpu_temp=$(vcgencmd measure_temp 2>/dev/null | cut -d'=' -f2 | cut -d"'" -f1 || echo "N/A")
+    
+    # Network metrics
+    local network_rx=$(cat /sys/class/net/eth0/statistics/rx_bytes 2>/dev/null || echo "0")
+    local network_tx=$(cat /sys/class/net/eth0/statistics/tx_bytes 2>/dev/null || echo "0")
+    
+    # Service status
+    local service_status=$(systemctl is-active federated-client-${NODE_ID} 2>/dev/null || echo "unknown")
+    
+    # Create JSON metrics
+    cat > "$METRICS_FILE" << EOF
+{
+    "timestamp": "$timestamp",
+    "node_id": "$NODE_ID",
+    "system": {
+        "cpu_usage_percent": $cpu_usage,
+        "load_average": $load_avg,
+        "memory_total_mb": $memory_total,
+        "memory_used_mb": $memory_used,
+        "memory_usage_percent": $memory_percent,
+        "disk_usage_percent": $disk_usage,
+        "cpu_temperature_celsius": "$cpu_temp"
+    },
+    "network": {
+        "rx_bytes": $network_rx,
+        "tx_bytes": $network_tx
+    },
+    "service": {
+        "status": "$service_status",
+        "uptime_seconds": $(systemctl show federated-client-${NODE_ID} --property=ActiveEnterTimestamp --value | xargs -I {} date -d {} +%s 2>/dev/null || echo "0")
+    }
+}
+EOF
+}
+
+# Function to check service health
+check_service_health() {
+    local service_name="federated-client-${NODE_ID}"
+    
+    if systemctl is-active --quiet "$service_name"; then
+        log_message "Service $service_name is running"
+        
+        # Check if process is responding
+        local health_url="http://localhost:8081/health"
+        if curl -s --max-time 5 "$health_url" > /dev/null 2>&1; then
+            log_message "Health check passed for $service_name"
+            return 0
+        else
+            log_message "WARNING: Health check failed for $service_name"
+            return 1
+        fi
+    else
+        log_message "ERROR: Service $service_name is not running"
+        
+        # Attempt to restart service
+        log_message "Attempting to restart $service_name"
+        sudo systemctl restart "$service_name"
+        sleep 10
+        
+        if systemctl is-active --quiet "$service_name"; then
+            log_message "Successfully restarted $service_name"
+            return 0
+        else
+            log_message "CRITICAL: Failed to restart $service_name"
+            return 1
+        fi
+    fi
+}
+
+# Function to check sensor connectivity
+check_sensors() {
+    local python_cmd="{{ project_dir }}/venv/bin/python"
+    local sensor_test="{{ project_dir }}/scripts/test_sensors.py"
+    
+    if [ -f "$sensor_test" ]; then
+        if timeout 30 "$python_cmd" "$sensor_test" > /dev/null 2>&1; then
+            log_message "Sensor connectivity check passed"
+            return 0
+        else
+            log_message "WARNING: Sensor connectivity check failed"
+            return 1
+        fi
+    else
+        log_message "WARNING: Sensor test script not found"
+        return 1
+    fi
+}
+
+# Function to check disk space
+check_disk_space() {
+    local disk_usage=$(df {{ project_dir }} | tail -1 | awk '{print $5}' | tr -d '%')
+    
+    if [ "$disk_usage" -gt 90 ]; then
+        log_message "CRITICAL: Disk usage is ${disk_usage}% - cleaning up logs"
+        
+        # Clean old log files
+        find {{ project_dir }}/logs -name "*.log.*" -mtime +7 -delete
+        find {{ project_dir }}/logs -name "*.json" -mtime +3 -delete
+        
+        log_message "Log cleanup completed"
+    elif [ "$disk_usage" -gt 80 ]; then
+        log_message "WARNING: Disk usage is ${disk_usage}%"
+    fi
+}
+
+# Function to monitor federated learning progress
+check_fl_progress() {
+    local log_file="{{ project_dir }}/logs/${NODE_ID}.log"
+    
+    if [ -f "$log_file" ]; then
+        # Check for recent federated learning activity (last 10 minutes)
+        local recent_activity=$(tail -n 100 "$log_file" | grep -c "$(date -d '10 minutes ago' '+%Y-%m-%d %H:%M')" || echo "0")
+        
+        if [ "$recent_activity" -gt 0 ]; then
+            log_message "Federated learning activity detected: $recent_activity events"
+        else
+            log_message "No recent federated learning activity"
+        fi
+        
+        # Check for errors in recent logs
+        local recent_errors=$(tail -n 100 "$log_file" | grep -c "ERROR\|CRITICAL" || echo "0")
+        
+        if [ "$recent_errors" -gt 0 ]; then
+            log_message "WARNING: $recent_errors errors found in recent logs"
+        fi
+    fi
+}
+
+# Main monitoring routine
+main() {
+    log_message "Starting monitoring check for node $NODE_ID"
+    
+    # Collect system metrics
+    get_system_metrics
+    
+    # Check service health
+    if ! check_service_health; then
+        log_message "Service health check failed"
+    fi
+    
+    # Check sensors
+    if ! check_sensors; then
+        log_message "Sensor check failed"
+    fi
+    
+    # Check disk space
+    check_disk_space
+    
+    # Check federated learning progress
+    check_fl_progress
+    
+    log_message "Monitoring check completed for node $NODE_ID"
+}
+
+# Run main function
+main "$@"

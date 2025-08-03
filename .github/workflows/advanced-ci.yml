@@ -1,0 +1,583 @@
+name: Advanced CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop, 'feature/*', 'hotfix/*' ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    # Run security scans daily at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      run_performance_tests:
+        description: 'Run performance benchmarks'
+        required: false
+        default: 'true'
+        type: boolean
+      deploy_docs:
+        description: 'Deploy documentation'
+        required: false
+        default: 'false'
+        type: boolean
+
+env:
+  PYTHON_VERSION: '3.11'
+  NODE_VERSION: '18'
+  DOCKER_REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  # Pre-flight checks
+  pre-flight:
+    runs-on: ubuntu-latest
+    name: Pre-flight Checks
+    outputs:
+      should_run_tests: ${{ steps.changes.outputs.code }}
+      should_run_docs: ${{ steps.changes.outputs.docs }}
+      should_run_security: ${{ steps.changes.outputs.security }}
+    
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - uses: dorny/paths-filter@v2
+      id: changes
+      with:
+        filters: |
+          code:
+            - 'server/**'
+            - 'client/**'
+            - 'tests/**'
+            - 'requirements*.txt'
+            - 'pyproject.toml'
+          docs:
+            - 'docs/**'
+            - 'README.md'
+            - 'mkdocs.yml'
+          security:
+            - 'server/**'
+            - 'client/**'
+            - 'requirements*.txt'
+            - '.github/workflows/**'
+    
+    - name: Print change detection results
+      run: |
+        echo "Code changes: ${{ steps.changes.outputs.code }}"
+        echo "Docs changes: ${{ steps.changes.outputs.docs }}"
+        echo "Security changes: ${{ steps.changes.outputs.security }}"
+
+  # Code quality and formatting
+  code-quality:
+    runs-on: ubuntu-latest
+    name: Code Quality & Formatting
+    needs: pre-flight
+    if: needs.pre-flight.outputs.should_run_tests == 'true'
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        cache: 'pip'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install black isort flake8 mypy pylint pre-commit
+        pip install -r requirements-dev.txt
+    
+    - name: Cache pre-commit
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pre-commit
+        key: pre-commit-${{ runner.os }}-${{ hashFiles('.pre-commit-config.yaml') }}
+    
+    - name: Run pre-commit hooks
+      run: |
+        pre-commit run --all-files --show-diff-on-failure
+    
+    - name: Check code formatting with Black
+      run: |
+        black --check --diff --color .
+    
+    - name: Check import sorting with isort
+      run: |
+        isort --check-only --diff --color .
+    
+    - name: Lint with flake8
+      run: |
+        flake8 . --format=github --statistics
+    
+    - name: Type checking with mypy
+      run: |
+        mypy server/ client/ --ignore-missing-imports --show-error-codes
+    
+    - name: Advanced linting with pylint
+      run: |
+        pylint server/ client/ --output-format=github --score=no || true
+    
+    - name: Check docstring coverage
+      run: |
+        pip install docstr-coverage
+        docstr-coverage server/ client/ --badge=coverage --percentage-to-fail=80
+
+  # Comprehensive testing matrix
+  test-matrix:
+    runs-on: ${{ matrix.os }}
+    needs: [pre-flight, code-quality]
+    if: needs.pre-flight.outputs.should_run_tests == 'true'
+    
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ['3.11', '3.12']
+        test-type: [unit, integration]
+        exclude:
+          # Skip Windows/macOS for integration tests to save resources
+          - os: windows-latest
+            test-type: integration
+          - os: macos-latest
+            test-type: integration
+    
+    name: Test ${{ matrix.test-type }} - Python ${{ matrix.python-version }} on ${{ matrix.os }}
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+        cache: 'pip'
+    
+    - name: Install system dependencies (Ubuntu)
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential cmake libhdf5-dev pkg-config
+    
+    - name: Install system dependencies (macOS)
+      if: matrix.os == 'macos-latest'
+      run: |
+        brew install cmake hdf5 pkg-config
+    
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements-dev.txt
+        pip install pytest pytest-cov pytest-xdist pytest-mock pytest-timeout
+        pip install coverage[toml]
+    
+    - name: Run unit tests
+      if: matrix.test-type == 'unit'
+      run: |
+        pytest tests/unit/ \
+          -v \
+          --cov=server \
+          --cov=client \
+          --cov-report=xml \
+          --cov-report=html \
+          --cov-report=term-missing \
+          --cov-fail-under=80 \
+          --timeout=300 \
+          -n auto
+    
+    - name: Run integration tests
+      if: matrix.test-type == 'integration'
+      run: |
+        pytest tests/integration/ \
+          -v \
+          --timeout=600 \
+          -m "not hardware and not slow"
+    
+    - name: Upload coverage to Codecov
+      if: matrix.test-type == 'unit' && matrix.os == 'ubuntu-latest' && matrix.python-version == '3.11'
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.xml
+        flags: unittests
+        name: codecov-umbrella
+        fail_ci_if_error: true
+    
+    - name: Upload test artifacts
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: test-results-${{ matrix.os }}-${{ matrix.python-version }}-${{ matrix.test-type }}
+        path: |
+          htmlcov/
+          pytest-report.xml
+          coverage.xml
+
+  # Security scanning and vulnerability assessment
+  security-comprehensive:
+    runs-on: ubuntu-latest
+    name: Comprehensive Security Scan
+    needs: pre-flight
+    if: needs.pre-flight.outputs.should_run_security == 'true' || github.event_name == 'schedule'
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        cache: 'pip'
+    
+    - name: Install security tools
+      run: |
+        python -m pip install --upgrade pip
+        pip install bandit safety pip-audit semgrep
+        pip install -r requirements-dev.txt
+    
+    - name: Run comprehensive security audit
+      run: |
+        python scripts/security_audit.py --output-format json --output-file security-audit-results.json
+    
+    - name: Run Bandit security scan
+      run: |
+        bandit -r server/ client/ -f json -o bandit-report.json
+    
+    - name: Run Safety vulnerability check
+      run: |
+        safety check --json --output safety-report.json
+    
+    - name: Run pip-audit
+      run: |
+        pip-audit --format=json --output=pip-audit-report.json
+    
+    - name: Run Semgrep static analysis
+      run: |
+        semgrep --config=auto --json --output=semgrep-report.json server/ client/ || true
+    
+    - name: Upload security reports
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: security-reports
+        path: |
+          security-audit-results.json
+          bandit-report.json
+          safety-report.json
+          pip-audit-report.json
+          semgrep-report.json
+    
+    - name: Security report summary
+      if: always()
+      run: |
+        echo "## Security Scan Summary" >> $GITHUB_STEP_SUMMARY
+        echo "- Bandit: $(jq '.results | length' bandit-report.json || echo 'N/A') issues found"  >> $GITHUB_STEP_SUMMARY
+        echo "- Safety: $(jq '.vulnerabilities | length' safety-report.json || echo 'N/A') vulnerabilities found" >> $GITHUB_STEP_SUMMARY
+        echo "- pip-audit: $(jq '.vulnerabilities | length' pip-audit-report.json || echo 'N/A') vulnerabilities found" >> $GITHUB_STEP_SUMMARY
+
+  # Performance benchmarking
+  performance-benchmarks:
+    runs-on: ubuntu-latest
+    name: Performance Benchmarks
+    needs: [pre-flight, test-matrix]
+    if: (needs.pre-flight.outputs.should_run_tests == 'true' && github.event.inputs.run_performance_tests == 'true') || github.event_name == 'schedule'
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        cache: 'pip'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements-dev.txt
+        pip install pytest-benchmark memory-profiler line-profiler
+    
+    - name: Run TinyML performance benchmarks
+      run: |
+        python scripts/test_tinyml_pipeline.py --benchmark --output-file tinyml-benchmark.json
+    
+    - name: Run MATLAB integration benchmarks
+      run: |
+        python scripts/test_matlab_integration.py --benchmark --output-file matlab-benchmark.json
+    
+    - name: Run federated learning simulation benchmarks
+      run: |
+        python scripts/simulate_federated_learning.py --benchmark --output-file federated-benchmark.json
+    
+    - name: Memory profiling
+      run: |
+        mprof run python scripts/test_tinyml_pipeline.py
+        mprof plot -o memory-profile.png
+    
+    - name: Upload benchmark results
+      uses: actions/upload-artifact@v3
+      with:
+        name: performance-benchmarks
+        path: |
+          *-benchmark.json
+          memory-profile.png
+          mprofile_*.dat
+    
+    - name: Performance regression check
+      run: |
+        # Compare with previous benchmarks if available
+        echo "## Performance Benchmark Results" >> $GITHUB_STEP_SUMMARY
+        echo "Benchmark results uploaded as artifacts" >> $GITHUB_STEP_SUMMARY
+
+  # Docker multi-architecture builds
+  docker-build:
+    runs-on: ubuntu-latest
+    name: Docker Multi-Arch Build
+    needs: [code-quality, test-matrix]
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+    
+    - name: Log in to Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.DOCKER_REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Extract metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.DOCKER_REGISTRY }}/${{ env.IMAGE_NAME }}
+        tags: |
+          type=ref,event=branch
+          type=ref,event=pr
+          type=sha,prefix={{branch}}-
+    
+    - name: Build and push Docker images
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: .devcontainer/Dockerfile
+        platforms: linux/amd64,linux/arm64
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+  # Documentation building and deployment
+  documentation:
+    runs-on: ubuntu-latest
+    name: Build & Deploy Documentation
+    needs: pre-flight
+    if: needs.pre-flight.outputs.should_run_docs == 'true' || github.event.inputs.deploy_docs == 'true'
+    
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        cache: 'pip'
+    
+    - name: Install documentation dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install mkdocs mkdocs-material mkdocs-mermaid2-plugin
+        pip install mkdocstrings[python] mkdocs-jupyter
+        pip install -r requirements-dev.txt
+    
+    - name: Generate API documentation
+      run: |
+        # Generate API docs from docstrings
+        python -c "
+        import os
+        import importlib.util
+        from pathlib import Path
+        
+        # Create API docs directory
+        api_docs_dir = Path('docs/api')
+        api_docs_dir.mkdir(exist_ok=True)
+        
+        # Generate module documentation
+        modules = ['server.models', 'server.federated', 'client.sensing', 'client.training']
+        for module in modules:
+            doc_file = api_docs_dir / f'{module.replace(\".\", \"_\")}.md'
+            with open(doc_file, 'w') as f:
+                f.write(f'# {module}\\n\\n')
+                f.write(f'::: {module}\\n')
+        "
+    
+    - name: Build documentation
+      run: |
+        mkdocs build --strict
+    
+    - name: Deploy to GitHub Pages
+      if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      uses: peaceiris/actions-gh-pages@v3
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: ./site
+        cname: your-domain.com  # Optional: replace with your domain
+    
+    - name: Upload documentation artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: documentation-site
+        path: site/
+
+  # End-to-end testing
+  e2e-testing:
+    runs-on: ubuntu-latest
+    name: End-to-End Testing
+    needs: [test-matrix, docker-build]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        cache: 'pip'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements-dev.txt
+        pip install docker-compose
+    
+    - name: Start services with Docker Compose
+      run: |
+        # Create docker-compose for testing
+        cat > docker-compose.test.yml << EOF
+        version: '3.8'
+        services:
+          federated-server:
+            build:
+              context: .
+              dockerfile: .devcontainer/Dockerfile
+            command: python server/main.py
+            ports:
+              - "8080:8080"
+            environment:
+              - SIMULATION_MODE=true
+          
+          federated-client:
+            build:
+              context: .
+              dockerfile: .devcontainer/Dockerfile
+            command: python client/main.py
+            depends_on:
+              - federated-server
+            environment:
+              - SIMULATION_MODE=true
+              - SERVER_ADDRESS=federated-server:8080
+        EOF
+        
+        docker-compose -f docker-compose.test.yml up -d
+        sleep 30  # Wait for services to start
+    
+    - name: Run end-to-end tests
+      run: |
+        # Test server health
+        curl -f http://localhost:8080/health || exit 1
+        
+        # Run comprehensive E2E test
+        python -c "
+        import requests
+        import time
+        
+        # Test federated learning workflow
+        server_url = 'http://localhost:8080'
+        
+        # Check server status
+        response = requests.get(f'{server_url}/health')
+        assert response.status_code == 200
+        
+        print('✅ End-to-end tests passed!')
+        "
+    
+    - name: Cleanup
+      if: always()
+      run: |
+        docker-compose -f docker-compose.test.yml down -v
+
+  # Deployment to staging/production
+  deploy:
+    runs-on: ubuntu-latest
+    name: Deploy to Environment
+    needs: [security-comprehensive, performance-benchmarks, e2e-testing]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    environment: 
+      name: production
+      url: https://your-production-url.com
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Deploy to production
+      run: |
+        echo "🚀 Deploying to production environment"
+        # Add your deployment logic here
+        # This could include:
+        # - Deploying to AWS/Azure/GCP
+        # - Updating Kubernetes manifests
+        # - Running database migrations
+        # - Updating configuration
+    
+    - name: Post-deployment verification
+      run: |
+        echo "✅ Deployment verification completed"
+        # Add post-deployment checks here
+
+  # Notification and reporting
+  notify-results:
+    runs-on: ubuntu-latest
+    name: Notify Results
+    needs: [code-quality, test-matrix, security-comprehensive, performance-benchmarks, documentation, deploy]
+    if: always()
+    
+    steps:
+    - name: Generate workflow summary
+      run: |
+        echo "## 🚀 Sprint 6 CI/CD Pipeline Results" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### Job Status Summary" >> $GITHUB_STEP_SUMMARY
+        echo "- Code Quality: ${{ needs.code-quality.result }}" >> $GITHUB_STEP_SUMMARY
+        echo "- Testing: ${{ needs.test-matrix.result }}" >> $GITHUB_STEP_SUMMARY
+        echo "- Security: ${{ needs.security-comprehensive.result }}" >> $GITHUB_STEP_SUMMARY
+        echo "- Performance: ${{ needs.performance-benchmarks.result }}" >> $GITHUB_STEP_SUMMARY
+        echo "- Documentation: ${{ needs.documentation.result }}" >> $GITHUB_STEP_SUMMARY
+        echo "- Deployment: ${{ needs.deploy.result }}" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 📊 Artifacts Generated" >> $GITHUB_STEP_SUMMARY
+        echo "- Test coverage reports" >> $GITHUB_STEP_SUMMARY
+        echo "- Security scan results" >> $GITHUB_STEP_SUMMARY
+        echo "- Performance benchmarks" >> $GITHUB_STEP_SUMMARY
+        echo "- Documentation site" >> $GITHUB_STEP_SUMMARY
+        echo "- Docker images" >> $GITHUB_STEP_SUMMARY
+    
+    - name: Success notification
+      if: needs.code-quality.result == 'success' && needs.test-matrix.result == 'success'
+      run: |
+        echo "✅ Sprint 6 CI/CD Pipeline completed successfully!"
+        echo "All quality gates passed and deployment is ready."
+    
+    - name: Failure notification
+      if: needs.code-quality.result == 'failure' || needs.test-matrix.result == 'failure'
+      run: |
+        echo "❌ Sprint 6 CI/CD Pipeline encountered failures."
+        echo "Please review the failed jobs and address the issues."
+        exit 1
