@@ -40,7 +40,10 @@ cd Raspberry-Pi5-Federated
 # Set up development environment
 python3 -m venv venv
 source venv/bin/activate
-pip install -r requirements.txt
+pip install -r requirements.lock
+# For server or client only:
+# pip install -r server/requirements.lock
+# pip install -r client/requirements.lock
 pip install -r requirements-dev.txt
 
 # Open in VS Code

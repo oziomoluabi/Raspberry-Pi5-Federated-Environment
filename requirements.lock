@@ -1,0 +1,7 @@
+# Pinned top-level dependencies
+-r server/requirements.lock
+-r client/requirements.lock
+
+docker==6.1.0
+ansible==8.0.0
+octave==7.0.0

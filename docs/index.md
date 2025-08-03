@@ -142,7 +142,7 @@ code IoT_Edge.code-workspace
 # Or manual setup
 python3 -m venv venv
 source venv/bin/activate
-pip install -r requirements.txt
+pip install -r requirements.lock
 ```
 
 ### 3. Run Federated Learning
