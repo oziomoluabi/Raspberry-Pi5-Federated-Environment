@@ -205,7 +205,7 @@ jobs:
         fail_ci_if_error: true
     
     - name: Upload test artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: test-results-${{ matrix.os }}-${{ matrix.python-version }}-${{ matrix.test-type }}
@@ -257,7 +257,7 @@ jobs:
         semgrep --config=auto --json --output=semgrep-report.json server/ client/ || true
     
     - name: Upload security reports
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: security-reports
@@ -316,7 +316,7 @@ jobs:
         mprof plot -o memory-profile.png
     
     - name: Upload benchmark results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: performance-benchmarks
         path: |
@@ -431,7 +431,7 @@ jobs:
         cname: your-domain.com  # Optional: replace with your domain
     
     - name: Upload documentation artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: documentation-site
         path: site/
